@@ -1,0 +1,15 @@
+#ifndef MASTER_CONFIG_H_
+#define MASTER_CONFIG_H_
+
+#include "../config.h"
+#include "custom_board.h"
+
+#define THIS_DEVICE_ROWS 8
+#define THIS_DEVICE_COLS 16
+
+#define MATRIX_ROW_PINS { ROW0, ROW1, ROW2, ROW3, ROW4, ROW5, ROW6, ROW7 }
+#define MATRIX_COL_PINS { COL00, COL01, COL02, COL03, COL04, COL05, COL06, COL07, COL08, COL09, COL10, COL11, COL12, COL13, COL14, COL15 }
+#define IS_LEFT_HAND  true
+
+
+#endif /* MASTER_CONFIG_H_ */
