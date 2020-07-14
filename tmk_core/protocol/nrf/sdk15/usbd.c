@@ -745,8 +745,10 @@ int usbd_enable(void) {
 void usbd_process(void) {
   while (app_usbd_event_queue_process()) {
     if (auto_connection_check) {
-      if (auto_connection_check_cnt > 100) {
+      auto_connection_check_cnt++;
+      if (auto_connection_check_cnt > 100) { // make some delay
         auto_connection_check = false;
+        auto_connection_check_cnt = 0;
         NRF_LOG_DEBUG("auto_connection_check!");
         NRF_LOG_DEBUG("nrf_drv_usbd_is_started: %d", nrf_drv_usbd_is_started());
         NRF_LOG_DEBUG("nrf_drv_usbd_bus_suspend_check: %d", nrf_drv_usbd_bus_suspend_check());
@@ -768,8 +770,6 @@ void usbd_process(void) {
             NRF_LOG_DEBUG("BLE enable");
           }
         }
-      } else {
-        auto_connection_check_cnt++;
       }
     }
     continue;/* Nothing to do */
