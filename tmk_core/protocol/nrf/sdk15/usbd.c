@@ -744,42 +744,42 @@ int usbd_enable(void) {
 void usbd_process(void) {
   while (app_usbd_event_queue_process()) {
 
-#ifndef NRF_SEPARATE_KEYBOARD_SLAVE
-    static int auto_connection_check_cnt = 0;
-    if (auto_connection_check) {
-      auto_connection_check_cnt++;
-      if (auto_connection_check_cnt > 100) { // make some delay
-        auto_connection_check = false;
-        auto_connection_check_cnt = 0;
-        NRF_LOG_DEBUG("auto_connection_check!");
-        NRF_LOG_DEBUG("nrf_drv_usbd_is_started: %d", nrf_drv_usbd_is_started());
-        NRF_LOG_DEBUG("nrf_drv_usbd_bus_suspend_check: %d", nrf_drv_usbd_bus_suspend_check());
-        if (nrf_drv_usbd_is_started()) {
-          if (!get_usb_enabled()) {
-            if (!nrf_drv_usbd_bus_suspend_check()) { // connect to USB HOST
-              select_usb();
-              NRF_LOG_DEBUG("USB send enabled");
-            } else { // connect to CHARGER
-              if (!get_ble_enabled()) {
-                select_ble();
-                NRF_LOG_DEBUG("BLE enable");
-              }
-            }
-          }
-        } else {
-          if (!get_ble_enabled()) { // USB POWER removed and battery present
-            select_ble();
-            NRF_LOG_DEBUG("BLE enable");
-          }
-        }
-      }
-    }
-#endif
-
     continue;/* Nothing to do */
   }
 
   cli_exec();
+
+#ifndef NRF_SEPARATE_KEYBOARD_SLAVE
+  static int auto_connection_check_cnt = 0;
+  if (auto_connection_check) {
+    auto_connection_check_cnt++;
+    if (auto_connection_check_cnt > 100) { // make some delay
+      auto_connection_check = false;
+      auto_connection_check_cnt = 0;
+      NRF_LOG_DEBUG("auto_connection_check!");
+      NRF_LOG_DEBUG("nrf_drv_usbd_is_started: %d", nrf_drv_usbd_is_started());
+      NRF_LOG_DEBUG("nrf_drv_usbd_bus_suspend_check: %d", nrf_drv_usbd_bus_suspend_check());
+      if (nrf_drv_usbd_is_started()) {
+        if (!get_usb_enabled()) {
+          if (!nrf_drv_usbd_bus_suspend_check()) { // connect to USB HOST
+            select_usb();
+            NRF_LOG_DEBUG("USB send enabled");
+          } else { // connect to CHARGER
+            if (!get_ble_enabled()) {
+              select_ble();
+              NRF_LOG_DEBUG("BLE enable");
+            }
+          }
+        }
+      } else {
+        if (!get_ble_enabled()) { // USB POWER removed and battery present
+          select_ble();
+          NRF_LOG_DEBUG("BLE enable");
+        }
+      }
+    }
+  }
+#endif
 }
 
 int usbd_send_kbd_report(app_usbd_hid_kbd_t const *  p_kbd, report_keyboard_t *report);
