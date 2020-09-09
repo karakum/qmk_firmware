@@ -21,6 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
+#include "nrf_gpio.h"
+#include "nrf_drv_usbd.h"
 
 
 enum custom_keycodes {
@@ -103,7 +105,7 @@ qk_tap_dance_action_t tap_dance_actions[] = {
 };
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-  char str[16];
+  char str[32];
   if (record->event.pressed) {
     switch (keycode) {
     case DELBNDS:
@@ -157,7 +159,15 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
       return false;
     case BATT_LV:
     	NRF_LOG_DEBUG("Battery level %4dmV\n", get_vcc());
-      sprintf(str, "%4dmV", get_vcc());
+      if (nrf_drv_usbd_is_started()) { // CHARGING
+        if (!nrf_gpio_pin_read(CHARGED)) { // CHARGED
+          sprintf(str, "%4dmV OK\n", get_vcc());
+        } else {
+          sprintf(str, "%4dmV CHRG\n", get_vcc());
+        }
+      } else { // DISCHARGING
+        sprintf(str, "%4dmV\n", get_vcc());
+      }
       send_string(str);
       return false;
     case ENT_DFU:
