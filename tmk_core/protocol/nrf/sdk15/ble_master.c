@@ -71,6 +71,10 @@
 #include "nrf_ble_qwr.h"
 #include "nrf_pwr_mgmt.h"
 #include "nrf_fstorage.h"
+# ifdef USE_BATTERY_CHARGED_STATE_PIN
+#include "nrf_gpio.h"
+#include "nrf_drv_usbd.h"
+# endif
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -396,6 +400,10 @@ static void battery_level_update(void) {
   uint8_t battery_level;
 
   adc_start();
+#ifdef USE_BATTERY_CHARGED_STATE_PIN
+  bool charged = !nrf_gpio_pin_read(USE_BATTERY_CHARGED_STATE_PIN);
+  bool powered = nrf_drv_usbd_is_started();
+#endif
 #ifdef USE_BATTERY_PIN
   m_vbat_history[m_vbat_history_index] = get_vcc();
   m_vbat_history_index++;
@@ -425,7 +433,14 @@ static void battery_level_update(void) {
     diff = V_MAX-V_MIN;
   }
   battery_level = diff * 100 / (V_MAX-V_MIN);
+# ifdef USE_BATTERY_CHARGED_STATE_PIN
+  if (battery_level == 100 && powered && !charged) { // do not notify 100 until fully charged
+    battery_level = 99;
+  }
+  NRF_LOG_DEBUG("         Avg: %04d mV, %d%%%s", vbat, battery_level, powered ? (charged ? " DONE" : " CHARGING") : "");
+# else
   NRF_LOG_DEBUG("         Avg: %04d mV, %d%%", vbat, battery_level);
+# endif
 #else
   battery_level = get_vcc() / 30;
 #endif
