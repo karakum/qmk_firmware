@@ -91,7 +91,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
       KC_LCTL, KC_LGUI, KC_LALT,                   KC_SPC,                                KC_RALT, KC_RGUI, LT(1, KC_APP), KC_RCTL,   KC_LEFT, KC_DOWN, KC_RGHT,   KC_P0,            KC_PDOT
   ),
   [MEDIA]=KEYMAP(
-      XXXXXXX,          XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, USB_EN,  USB_DIS, BLE_EN,  BLE_DIS,   XXXXXXX, XXXXXXX, KC_MUTE,
+      ENT_SLP,          XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, USB_EN,  USB_DIS, BLE_EN,  BLE_DIS,   XXXXXXX, XXXXXXX, KC_MUTE,
       ENT_DFU, AD_WO_L, DELBNDS, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   KC_MPLY, KC_MSTP, KC_VOLU,   XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
       XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   KC_MPRV, KC_MNXT, KC_VOLD,   XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
       XXXXXXX,          XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                                XXXXXXX, XXXXXXX, XXXXXXX,
@@ -104,8 +104,47 @@ qk_tap_dance_action_t tap_dance_actions[] = {
     [CAL] = ACTION_TAP_DANCE_DOUBLE(KC_NLCK, KC_CALC),
 };
 
+void sendBatteryLevel() {
+  char str[50];
+# ifndef BATTERY_VMAX
+#   define V_MAX 4200
+# else
+#   define V_MAX BATTERY_VMAX
+# endif
+# ifndef BATTERY_VMIN
+#   define V_MIN 2900
+# else
+#   define V_MIN BATTERY_VMIN
+# endif
+  int16_t vbat = get_vcc();
+  int16_t diff = vbat - V_MIN;
+  bool charged = !nrf_gpio_pin_read(USE_BATTERY_CHARGED_STATE_PIN);
+  bool powered = nrf_drv_usbd_is_started();
+  if (diff < 0) {
+    diff = 0;
+  } else if (diff > (V_MAX - V_MIN)) {
+    diff = V_MAX - V_MIN;
+  }
+  uint8_t battery_level = diff * 100 / (V_MAX - V_MIN);
+
+  if (battery_level == 100 && powered && !charged) { // do not notify 100 until fully charged
+    battery_level = 99;
+  }
+
+  if (powered) { // CHARGING
+    if (charged) { // CHARGED
+      sprintf(str, "%4d, =100", vbat);
+    } else {
+      sprintf(str, "%4d, %d", vbat, battery_level);
+    }
+  } else { // DISCHARGING
+    sprintf(str, "%4d, -%d", vbat, battery_level);
+  }
+
+  send_string(str);
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-  char str[32];
   if (record->event.pressed) {
     switch (keycode) {
     case DELBNDS:
@@ -158,17 +197,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
       delete_bond_id(3);
       return false;
     case BATT_LV:
-    	NRF_LOG_DEBUG("Battery level %4dmV\n", get_vcc());
-      if (nrf_drv_usbd_is_started()) { // CHARGING
-        if (!nrf_gpio_pin_read(CHARGED)) { // CHARGED
-          sprintf(str, "%4dmV OK\n", get_vcc());
-        } else {
-          sprintf(str, "%4dmV CHRG\n", get_vcc());
-        }
-      } else { // DISCHARGING
-        sprintf(str, "%4dmV\n", get_vcc());
-      }
-      send_string(str);
+      sendBatteryLevel();
       return false;
     case ENT_DFU:
       bootloader_jump();
@@ -185,8 +214,3 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   }
   return true;
 }
-;
-
-
-
-
