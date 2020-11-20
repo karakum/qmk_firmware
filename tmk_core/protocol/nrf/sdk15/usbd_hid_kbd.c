@@ -45,7 +45,7 @@
 #include "app_util_platform.h"
 #include "host.h"
 
-#define QUEUE_LEN 16
+#define QUEUE_LEN 64
 static report_keyboard_t report_buf[QUEUE_LEN];
 static uint8_t widx, ridx, cnt;
 static bool flag_usb_sending=false;
